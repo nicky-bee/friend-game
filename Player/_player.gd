@@ -1,7 +1,5 @@
 extends CharacterBody3D
 
-signal step
-
 # =========================
 # CONFIG
 # =========================
@@ -16,6 +14,18 @@ const AIR_CONTROL := 3.0
 const FRICTION := 8.0
 
 const SENSITIVITY := 0.005
+
+# Movement states
+var sprinting := false
+var walking := false
+
+# Speed control
+var speed := WALK_SPEED
+var lerp_speed := 10.0
+var air_lerp_speed := 3.0
+
+# Direction-based movement
+var direction: Vector3 = Vector3.ZERO
 
 # =========================
 # STATE
@@ -132,20 +142,32 @@ func _physics_process(delta):
 # MOVEMENT
 # =========================
 func handle_movement(delta):
-	var speed = SPRINT_SPEED if is_sprinting else WALK_SPEED
-	var direction = (head.transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
-	var target_velocity = direction * speed
+	handle_sprint(delta)
+
+	var target_dir = (head.transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
 	if is_on_floor():
-		velocity.x = move_toward(velocity.x, target_velocity.x, ACCEL * delta)
-		velocity.z = move_toward(velocity.z, target_velocity.z, ACCEL * delta)
-
-		if input_dir == Vector2.ZERO:
-			velocity.x = move_toward(velocity.x, 0, FRICTION * delta)
-			velocity.z = move_toward(velocity.z, 0, FRICTION * delta)
+		direction = direction.lerp(target_dir, delta * lerp_speed)
 	else:
-		velocity.x = lerp(velocity.x, target_velocity.x, AIR_CONTROL * delta)
-		velocity.z = lerp(velocity.z, target_velocity.z, AIR_CONTROL * delta)
+		if input_dir != Vector2.ZERO:
+			direction = direction.lerp(target_dir, delta * air_lerp_speed)
+
+	if direction != Vector3.ZERO:
+		velocity.x = direction.x * speed
+		velocity.z = direction.z * speed
+	else:
+		velocity.x = move_toward(velocity.x, 0, speed)
+		velocity.z = move_toward(velocity.z, 0, speed)
+
+func handle_sprint(delta):
+	if Input.is_action_pressed("sprint"):
+		sprinting = true
+		walking = false
+		speed = lerp(speed, SPRINT_SPEED, delta * lerp_speed)
+	else:
+		sprinting = false
+		walking = true
+		speed = lerp(speed, WALK_SPEED, delta * lerp_speed)
 
 # =========================
 # GRAVITY / JUMP
@@ -155,8 +177,12 @@ func apply_gravity(delta):
 		velocity.y -= GRAVITY * delta
 
 func handle_jump():
-	if Input.is_action_just_pressed("jump") && is_on_floor():
+	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = jump_velocity
+
+		if is_multiplayer_authority():
+			play_animation("Jump")
+			rpc("sync_animation", "jump")
 
 # =========================
 # INTERACTION
@@ -194,6 +220,9 @@ func die(attacker_id):
 # ANIMATION
 # =========================
 func play_animation(anim_name: String):
+	if animation_player.current_animation == anim_name:
+		return
+
 	animation_player.play(anim_name)
 
 # =========================
@@ -221,19 +250,22 @@ func request_shoot(origin, direction):
 	get_tree().current_scene.spawn_bullet(origin, direction, shooter_id)
 
 func update_animation_state():
-	var moving = velocity.length() > 0.1 and is_on_floor()
-
 	var new_anim = "Idle"
-	if moving:
-		new_anim = "Walk"
 
-	# Only update if changed
+	if not is_on_floor():
+		new_anim = "Jump"
+	elif velocity.length() > 0.1:
+		if sprinting:
+			new_anim = "Sprint"
+		else:
+			new_anim = "Walk"
+	else:
+		new_anim = "Idle"
+
 	if new_anim != current_anim:
 		current_anim = new_anim
-		print(current_anim)
 		play_animation(current_anim)
 
-		# Sync to others
 		if is_multiplayer_authority():
 			rpc("sync_animation", current_anim)
 
