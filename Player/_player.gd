@@ -24,6 +24,7 @@ var health := 100
 var input_dir := Vector2.ZERO
 var is_sprinting := false
 var wants_jump := false
+var jump_velocity = 4.0
 
 # =========================
 # MULTIPLAYER
@@ -32,6 +33,8 @@ var target_position: Vector3
 var target_velocity: Vector3
 var target_yaw: float
 var target_pitch: float
+var current_anim: String = ""
+var target_anim: String = ""
 
 # =========================
 # NODES
@@ -42,6 +45,7 @@ var target_pitch: float
 @onready var camera = $player_head/player_camera
 @onready var interaction_raycast = $player_head/player_camera/interaction_raycast
 @onready var muzzle = $player_head/player_camera/muzzle
+@onready var animation_player: AnimationPlayer = $animation_player
 
 func _ready():
 	print("Player ", name, " authority: ", get_multiplayer_authority(), " | my id: ", multiplayer.get_unique_id())
@@ -97,6 +101,8 @@ func _physics_process(delta):
 
 		move_and_slide()
 
+		update_animation_state()
+
 		rpc("sync_movement",
 			global_transform.origin,
 			velocity,
@@ -117,6 +123,10 @@ func _physics_process(delta):
 		# Smooth camera pitch
 		var current_pitch = camera.rotation.x
 		camera.rotation.x = lerp(current_pitch, target_pitch, 10 * delta)
+		
+		if target_anim != current_anim:
+			current_anim = target_anim
+			play_animation(current_anim)
 
 # =========================
 # MOVEMENT
@@ -145,9 +155,8 @@ func apply_gravity(delta):
 		velocity.y -= GRAVITY * delta
 
 func handle_jump():
-	if wants_jump and is_on_floor():
-		velocity.y = JUMP_VELOCITY
-		wants_jump = false
+	if Input.is_action_just_pressed("jump") && is_on_floor():
+		velocity.y = jump_velocity
 
 # =========================
 # INTERACTION
@@ -182,6 +191,12 @@ func die(attacker_id):
 	print("Player ", name, " killed by ", attacker_id)
 
 # =========================
+# ANIMATION
+# =========================
+func play_animation(anim_name: String):
+	animation_player.play(anim_name)
+
+# =========================
 # MULTIPLAYER
 # =========================
 @rpc("unreliable")
@@ -204,3 +219,27 @@ func request_shoot(origin, direction):
 		shooter_id = multiplayer.get_unique_id()
 
 	get_tree().current_scene.spawn_bullet(origin, direction, shooter_id)
+
+func update_animation_state():
+	var moving = velocity.length() > 0.1 and is_on_floor()
+
+	var new_anim = "Idle"
+	if moving:
+		new_anim = "Walk"
+
+	# Only update if changed
+	if new_anim != current_anim:
+		current_anim = new_anim
+		print(current_anim)
+		play_animation(current_anim)
+
+		# Sync to others
+		if is_multiplayer_authority():
+			rpc("sync_animation", current_anim)
+
+@rpc("unreliable")
+func sync_animation(anim_name):
+	if is_multiplayer_authority():
+		return
+
+	target_anim = anim_name
