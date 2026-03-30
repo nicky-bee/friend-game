@@ -1,0 +1,38 @@
+[gd_scene format=3 uid="uid://dhkamae3k1cgs"]
+
+[ext_resource type="Script" uid="uid://dsksjnr05c6ab" path="res://Networking/multiplayer_menu.gd" id="1_tev80"]
+
+[node name="MultiplayerMenu" type="Control" unique_id=829385989]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_tev80")
+
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=195468702]
+custom_minimum_size = Vector2(300, 200)
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer" unique_id=1522742012]
+layout_mode = 2
+
+[node name="host" type="Button" parent="PanelContainer/VBoxContainer" unique_id=1303429623]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+text = "Host"
+
+[node name="join" type="Button" parent="PanelContainer/VBoxContainer" unique_id=2123534785]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+text = "Join"
+
+[node name="ip_input" type="TextEdit" parent="PanelContainer/VBoxContainer" unique_id=1268515967]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+
+[connection signal="pressed" from="PanelContainer/VBoxContainer/host" to="." method="_on_host_pressed"]
+[connection signal="pressed" from="PanelContainer/VBoxContainer/join" to="." method="_on_join_pressed"]

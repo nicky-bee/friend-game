@@ -1,0 +1,38 @@
+[gd_scene format=3 uid="uid://dob662fylvojd"]
+
+[ext_resource type="Texture2D" uid="uid://cx3otw4hanicq" path="res://Levels/gazette 1.png" id="1_iqcmb"]
+[ext_resource type="PackedScene" uid="uid://dsvq1gg6t8ew4" path="res://Player/_player.tscn" id="1_uib4f"]
+[ext_resource type="Script" uid="uid://dqwk7wwc2mnfb" path="res://Levels/test_level.gd" id="1_y1yrn"]
+[ext_resource type="PackedScene" uid="uid://d1h0icig2yspf" path="res://Player/Bullet.tscn" id="3_2yvdw"]
+[ext_resource type="PackedScene" uid="uid://dhkamae3k1cgs" path="res://Networking/MultiplayerMenu.tscn" id="4_jyvk6"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_uib4f"]
+
+[sub_resource type="Sky" id="Sky_iqcmb"]
+sky_material = SubResource("ProceduralSkyMaterial_uib4f")
+
+[sub_resource type="Environment" id="Environment_y1yrn"]
+background_mode = 2
+sky = SubResource("Sky_iqcmb")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uib4f"]
+albedo_color = Color(0.56956726, 0.49064088, 0.34508464, 1)
+albedo_texture = ExtResource("1_iqcmb")
+texture_filter = 0
+
+[node name="TestLevel" type="Node3D" unique_id=2002519797]
+script = ExtResource("1_y1yrn")
+player_scene = ExtResource("1_uib4f")
+bullet_scene = ExtResource("3_2yvdw")
+
+[node name="environment" type="WorldEnvironment" parent="." unique_id=204451818]
+environment = SubResource("Environment_y1yrn")
+
+[node name="ground" type="CSGBox3D" parent="." unique_id=864926641]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22.510315, -0.57709885, -7.7795105)
+use_collision = true
+size = Vector3(144.55048, 1, 167.94464)
+material = SubResource("StandardMaterial3D_uib4f")
+
+[node name="MultiplayerMenu" parent="." unique_id=829385989 instance=ExtResource("4_jyvk6")]
+visible = false
